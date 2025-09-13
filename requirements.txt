@@ -1,0 +1,18 @@
+fastapi 
+uvicorn 
+databases[postgresql] 
+asyncpg
+pydantic
+pydantic[email]
+pydantic[email,cryptography]
+python-dotenv 
+sqlalchemy
+# supabase
+psycopg2-binary
+bcrypt
+python-multipart
+python-jose
+# streamlit
+sqlmodel
+passlib[bcrypt]
+pydantic-settings
