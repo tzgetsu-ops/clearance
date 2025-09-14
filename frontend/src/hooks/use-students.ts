@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { apiClient } from "../lib/api"
-import type { StudentReadWithClearance, StudentCreate, StudentUpdate, StudentLookupBody } from "../types/api"
+import type { StudentReadWithClearance, StudentCreate, StudentUpdate, StudentLookupBody, MyClearanceResponse } from "../types/api"
 
 export function useStudents() {
   const [students, setStudents] = useState<StudentReadWithClearance[]>([])
@@ -77,6 +77,15 @@ export function useStudents() {
     }
   }
 
+  const getMyClearance = async () => {
+    try {
+      const clearanceData = await apiClient.get<MyClearanceResponse>("/students/me/clearance")
+      return { success: true, data: clearanceData }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : "Failed to fetch your clearance data" }
+    }
+  }
+
   return {
     students,
     loading,
@@ -87,5 +96,6 @@ export function useStudents() {
     deleteStudent,
     lookupStudent,
     lookupStudentAdmin,
+    getMyClearance,
   }
 }

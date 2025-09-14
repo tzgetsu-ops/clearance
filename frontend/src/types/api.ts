@@ -162,3 +162,27 @@ export interface StudentLookupBody {
   request: StudentLookupRequest
   required_roles?: Role[] | null
 }
+
+export interface MyClearanceResponse {
+  student_info: {
+    id: number
+    matric_no: string
+    full_name: string
+    email: string
+    department: string
+  }
+  clearance_summary: {
+    is_fully_cleared: boolean
+    clearance_percentage: number
+    overall_status: string
+    approved_count: number
+    total_departments: number
+  }
+  department_statuses: Array<{
+    department: string
+    status: string
+    remarks: string | null
+    id: number
+  }>
+  next_steps: string[]
+}
