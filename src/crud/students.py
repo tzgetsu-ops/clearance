@@ -10,12 +10,21 @@ from src.crud import users as user_crud
 
 def get_student_by_id(db: Session, student_id: int) -> Optional[Student]:
     """Retrieves a student by their primary key ID."""
-    return db.get(Student, student_id)
+    student = db.get(Student, student_id)
+    if student:
+        # Explicitly load the relationships
+        db.refresh(student, ["rfid_tag", "clearance_statuses"])
+    return student
 
 
 def get_student_by_matric_no(db: Session, matric_no: str) -> Optional[Student]:
     """Retrieves a student by their unique matriculation number."""
-    return db.exec(select(Student).where(Student.matric_no == matric_no)).first()
+    student = db.exec(select(Student).where(
+        Student.matric_no == matric_no)).first()
+    if student:
+        # Explicitly load the relationships
+        db.refresh(student, ["rfid_tag", "clearance_statuses"])
+    return student
 
 
 def get_student_by_tag_id(db: Session, tag_id: str) -> Optional[Student]:
@@ -23,13 +32,22 @@ def get_student_by_tag_id(db: Session, tag_id: str) -> Optional[Student]:
     from src.models import RFIDTag
     tag = db.exec(select(RFIDTag).where(RFIDTag.tag_id == tag_id)).first()
     if tag and tag.student_id:
-        return db.exec(select(Student).where(Student.id == tag.student_id)).first()
+        student = db.exec(select(Student).where(
+            Student.id == tag.student_id)).first()
+        if student:
+            # Explicitly load the relationships
+            db.refresh(student, ["rfid_tag", "clearance_statuses"])
+        return student
     return None
 
 
 def get_all_students(db: Session, skip: int = 0, limit: int = 100) -> List[Student]:
     """Retrieves a paginated list of all students."""
-    return list(db.exec(select(Student).offset(skip).limit(limit)).all())
+    students = list(db.exec(select(Student).offset(skip).limit(limit)).all())
+    # Load relationships for all students
+    for student in students:
+        db.refresh(student, ["rfid_tag", "clearance_statuses"])
+    return students
 
 # --- Write Operations ---
 
@@ -46,9 +64,9 @@ def create_student(db: Session, student: StudentCreate) -> Student:
         password=student.password,  # The password from the student creation form
         email=student.email,
         username=student.full_name,
-        full_name = student.full_name,
+        full_name=student.full_name,
         department=student.department,
-        role = Role.STUDENT,
+        role=Role.STUDENT,
     )
     user_crud.create_user(db, user=user_for_student)  # Create the user
 
@@ -62,7 +80,7 @@ def create_student(db: Session, student: StudentCreate) -> Student:
     for dept in ClearanceDepartment:
         status = ClearanceStatus(
             department=dept,
-            student_id=db_student.id #type:ignore
+            student_id=db_student.id  # type:ignore
         )
         db.add(status)
     db.commit()
