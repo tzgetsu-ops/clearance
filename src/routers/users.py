@@ -15,10 +15,10 @@ router = APIRouter(
 def read_user_me(
     # This dependency ensures the user is an authenticated Admin or Staff
     # and injects their database object into the 'current_user' parameter.
-    current_user: User = Depends(get_current_active_user(required_roles=[Role.ADMIN, Role.STAFF]))
+    current_user: User = Depends(get_current_active_user(required_roles=[Role.ADMIN, Role.STAFF, Role.STUDENT]))
 ):
     """
-    Endpoint for a logged-in user (Admin or Staff) to retrieve their own profile.
+    Endpoint for a logged-in user to retrieve their own profile.
     The user is identified via their JWT token.
     """
     # The dependency handles fetching the user, so we just return it.
