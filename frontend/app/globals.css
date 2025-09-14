@@ -124,3 +124,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom layout improvements */
+@layer components {
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Ensure proper mobile spacing */
+  .mobile-safe {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Better button mobile handling */
+  .btn-responsive {
+    @apply w-full sm:w-auto;
+  }
+}

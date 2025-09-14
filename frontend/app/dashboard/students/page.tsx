@@ -20,7 +20,8 @@ import {
 import { StudentForm } from "../../../src/components/student-form"
 import { StudentLookup } from "../../../src/components/student-lookup"
 import { ClearanceUpdateForm } from "../../../src/components/clearance-update-form"
-import { Plus, Search, Edit, Trash2, Loader2 } from "lucide-react"
+import { StudentClearanceDetails } from "../../../src/components/student-clearance-details"
+import { Plus, Search, Edit, Trash2, Loader2, Eye } from "lucide-react"
 import { Role, ClearanceStatusEnum } from "../../../src/types/api"
 import type { StudentReadWithClearance } from "../../../src/types/api"
 
@@ -29,6 +30,7 @@ export default function StudentsPage() {
   const { students, loading, error, fetchStudents, createStudent, updateStudent, deleteStudent } = useStudents()
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingStudent, setEditingStudent] = useState<StudentReadWithClearance | null>(null)
+  const [viewingStudent, setViewingStudent] = useState<StudentReadWithClearance | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedStudent, setSelectedStudent] = useState<StudentReadWithClearance | null>(null)
 
@@ -106,124 +108,160 @@ export default function StudentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Students</h1>
-          <p className="text-muted-foreground">Manage student records and clearance status</p>
-        </div>
-        {user?.role === Role.ADMIN && (
-          <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Student
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Create New Student</DialogTitle>
-                <DialogDescription>Add a new student to the system</DialogDescription>
-              </DialogHeader>
-              <StudentForm onSubmit={handleCreateStudent} onCancel={() => setShowCreateForm(false)} />
-            </DialogContent>
-          </Dialog>
-        )}
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <StudentLookup onStudentFound={setSelectedStudent} />
-        <ClearanceUpdateForm initialMatricNo={selectedStudent?.matric_no} onSuccess={() => fetchStudents()} />
-      </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>All Students</CardTitle>
-          <CardDescription>Complete list of registered students</CardDescription>
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search students..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin" />
+      {viewingStudent ? (
+        <StudentClearanceDetails 
+          student={viewingStudent} 
+          onClose={() => setViewingStudent(null)} 
+        />
+      ) : (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Students</h1>
+              <p className="text-muted-foreground">Manage student records and clearance status</p>
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Matric No</TableHead>
-                  <TableHead>Department</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>RFID Tag</TableHead>
-                  {user?.role === Role.ADMIN && <TableHead>Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.full_name}</TableCell>
-                    <TableCell>{student.matric_no}</TableCell>
-                    <TableCell>{student.department}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(getOverallStatus(student))} variant="outline">
-                        {getOverallStatus(student)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{student.rfid_tag?.tag_id || "Not Linked"}</TableCell>
-                    {user?.role === Role.ADMIN && (
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Button variant="ghost" size="sm" onClick={() => setEditingStudent(student)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteStudent(student)}
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+            {user?.role === Role.ADMIN && (
+              <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Student
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Create New Student</DialogTitle>
+                    <DialogDescription>Add a new student to the system</DialogDescription>
+                  </DialogHeader>
+                  <StudentForm onSubmit={handleCreateStudent} onCancel={() => setShowCreateForm(false)} />
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
 
-      {editingStudent && (
-        <Dialog open={!!editingStudent} onOpenChange={() => setEditingStudent(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Edit Student</DialogTitle>
-              <DialogDescription>Update student information</DialogDescription>
-            </DialogHeader>
-            <StudentForm
-              student={editingStudent}
-              onSubmit={handleUpdateStudent}
-              onCancel={() => setEditingStudent(null)}
-              isEdit
-            />
-          </DialogContent>
-        </Dialog>
+          <div className="grid gap-6 md:grid-cols-2">
+            <StudentLookup onStudentFound={setSelectedStudent} />
+            <ClearanceUpdateForm initialMatricNo={selectedStudent?.matric_no} onSuccess={() => fetchStudents()} />
+          </div>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>All Students</CardTitle>
+              <CardDescription>Complete list of registered students - Click on a student to view detailed clearance status</CardDescription>
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search students..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Matric No</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>RFID Tag</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredStudents.map((student) => (
+                      <TableRow 
+                        key={student.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setViewingStudent(student)}
+                      >
+                        <TableCell className="font-medium">{student.full_name}</TableCell>
+                        <TableCell>{student.matric_no}</TableCell>
+                        <TableCell>{student.department}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(getOverallStatus(student))} variant="outline">
+                            {getOverallStatus(student)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{student.rfid_tag?.tag_id || "Not Linked"}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setViewingStudent(student)
+                              }}
+                              title="View Details"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {user?.role === Role.ADMIN && (
+                              <>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingStudent(student)
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteStudent(student)
+                                  }}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          {editingStudent && (
+            <Dialog open={!!editingStudent} onOpenChange={() => setEditingStudent(null)}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Student</DialogTitle>
+                  <DialogDescription>Update student information</DialogDescription>
+                </DialogHeader>
+                <StudentForm
+                  student={editingStudent}
+                  onSubmit={handleUpdateStudent}
+                  onCancel={() => setEditingStudent(null)}
+                  isEdit
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+        </>
       )}
     </div>
   )

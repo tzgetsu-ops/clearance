@@ -20,7 +20,11 @@ export default function DashboardLayout({
         </div>
         <div className="flex flex-col flex-1 overflow-hidden">
           <DashboardHeader />
-          <main className="flex-1 overflow-y-auto bg-background p-6">{children}</main>
+          <main className="flex-1 overflow-y-auto bg-background">
+            <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-6">
+              {children}
+            </div>
+          </main>
         </div>
       </div>
     </AuthGuard>

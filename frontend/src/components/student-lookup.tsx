@@ -9,9 +9,10 @@ import { Label } from "../../components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
 import { Alert, AlertDescription } from "../../components/ui/alert"
 import { Badge } from "../../components/ui/badge"
-import { Loader2, Search } from "lucide-react"
+import { Loader2, Search, Eye } from "lucide-react"
 import { useStudents } from "../hooks/use-students"
 import { useAuth } from "../hooks/use-auth"
+import { StudentClearanceDetails } from "./student-clearance-details"
 import type { StudentReadWithClearance } from "../types/api"
 import { Role, ClearanceStatusEnum } from "../types/api"
 
@@ -25,6 +26,7 @@ export function StudentLookup({ onStudentFound }: StudentLookupProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [student, setStudent] = useState<StudentReadWithClearance | null>(null)
+  const [showDetailedView, setShowDetailedView] = useState(false)
   const { lookupStudent, lookupStudentAdmin } = useStudents()
   const { user } = useAuth()
 
@@ -80,15 +82,22 @@ export function StudentLookup({ onStudentFound }: StudentLookupProps) {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Student Lookup</CardTitle>
-          <CardDescription>
-            {user?.role === Role.STUDENT
-              ? "Enter your matriculation number to view your clearance status"
-              : "Search for a student by matriculation number or RFID tag"}
-          </CardDescription>
-        </CardHeader>
+      {showDetailedView && student ? (
+        <StudentClearanceDetails 
+          student={student} 
+          onClose={() => setShowDetailedView(false)} 
+        />
+      ) : (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>Student Lookup</CardTitle>
+              <CardDescription>
+                {user?.role === Role.STUDENT
+                  ? "Enter your matriculation number to view your clearance status"
+                  : "Search for a student by matriculation number or RFID tag"}
+              </CardDescription>
+            </CardHeader>
         <CardContent>
           <form onSubmit={handleLookup} className="space-y-4">
             {error && (
@@ -188,8 +197,21 @@ export function StudentLookup({ onStudentFound }: StudentLookupProps) {
                 </div>
               </div>
             )}
+
+            <div className="flex justify-end pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDetailedView(true)}
+                className="flex items-center space-x-2"
+              >
+                <Eye className="h-4 w-4" />
+                <span>View Detailed Status</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
+      )}
+        </>
       )}
     </div>
   )

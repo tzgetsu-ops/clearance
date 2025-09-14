@@ -11,7 +11,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted">
       {/* Header */}
       <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
           <div className="flex items-center space-x-2">
             <GraduationCap className="h-8 w-8 text-primary" />
             <div>
@@ -26,7 +26,7 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <main className="container py-16">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center space-y-6 mb-16">
           <Badge variant="secondary" className="mb-4">
             College of Engineering
@@ -39,18 +39,18 @@ export default function HomePage() {
             Streamline your clearance process with our comprehensive RFID-enabled portal. Track progress, manage
             documents, and complete requirements efficiently.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center px-4">
+            <Button size="lg" asChild className="w-full sm:w-auto">
               <Link href="/login">Get Started</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
               <Link href="/dashboard/my-clearance">Check My Status</Link>
             </Button>
           </div>
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
           <Card>
             <CardHeader>
               <Shield className="h-8 w-8 text-primary mb-2" />
@@ -93,7 +93,7 @@ export default function HomePage() {
         </div>
 
         {/* Quick Access Section */}
-        <div className="mt-16 text-center">
+        <div className="mt-16 text-center px-4">
           <h2 className="text-2xl font-bold mb-8">Quick Access</h2>
           <div className="grid sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
             <Card className="hover:shadow-md transition-shadow">
@@ -102,7 +102,7 @@ export default function HomePage() {
                 <CardDescription>Check your clearance status and track progress</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-transparent" variant="outline" asChild>
+                <Button className="w-full" variant="outline" asChild>
                   <Link href="/dashboard/my-clearance">View Status</Link>
                 </Button>
               </CardContent>
@@ -114,7 +114,7 @@ export default function HomePage() {
                 <CardDescription>Manage student records and clearance updates</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-transparent" variant="outline" asChild>
+                <Button className="w-full" variant="outline" asChild>
                   <Link href="/login">Staff Login</Link>
                 </Button>
               </CardContent>
@@ -126,7 +126,7 @@ export default function HomePage() {
                 <CardDescription>Full system management and user administration</CardDescription>
               </CardHeader>
               <CardContent>
-                <Button className="w-full bg-transparent" variant="outline" asChild>
+                <Button className="w-full" variant="outline" asChild>
                   <Link href="/login">Admin Login</Link>
                 </Button>
               </CardContent>
@@ -137,7 +137,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t bg-muted/50 mt-16">
-        <div className="container py-8 text-center text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-sm text-muted-foreground">
           <p>&copy; 2024 College of Engineering. All rights reserved.</p>
         </div>
       </footer>
