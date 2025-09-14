@@ -42,7 +42,10 @@ class User(SQLModel, table=True):
     full_name: str
     hashed_password: str
     role: Role
-    department: Optional[Department] = None  # For staff members
+    # For academic departments (students)
+    department: Optional[Department] = None
+    # For staff members - which clearance dept they manage
+    clearance_department: Optional[ClearanceDepartment] = None
     rfid_tag: Optional["RFIDTag"] = Relationship(
         back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
@@ -106,6 +109,8 @@ class UserCreate(SQLModel):
     full_name: str
     role: Role
     department: Optional[Department] = None
+    # For staff members
+    clearance_department: Optional[ClearanceDepartment] = None
 
 
 class UserUpdate(SQLModel):
@@ -114,6 +119,7 @@ class UserUpdate(SQLModel):
     full_name: Optional[str] = None
     role: Optional[Role] = None
     department: Optional[Department] = None
+    clearance_department: Optional[ClearanceDepartment] = None
     password: Optional[str] = None
 
 
@@ -124,6 +130,7 @@ class UserRead(SQLModel):
     full_name: str
     role: Role
     department: Optional[Department] = None
+    clearance_department: Optional[ClearanceDepartment] = None
 
 # Student Models
 

@@ -6,17 +6,21 @@ from src.crud.utils import hash_password
 
 # --- Read Operations ---
 
+
 def get_user_by_id(db: Session, user_id: int) -> Optional[User]:
     """Retrieves a user by their primary key ID."""
     return db.get(User, user_id)
+
 
 def get_user_by_username(db: Session, username: str) -> Optional[User]:
     """Retrieves a user by their unique username."""
     return db.exec(select(User).where(User.username == username)).first()
 
+
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
     """Retrieves a user by their unique email."""
     return db.exec(select(User).where(User.email == email)).first()
+
 
 def get_user_by_tag_id(db: Session, tag_id: str) -> Optional[User]:
     """Get user by RFID tag ID."""
@@ -26,9 +30,11 @@ def get_user_by_tag_id(db: Session, tag_id: str) -> Optional[User]:
         return db.exec(select(User).where(User.id == tag.user_id)).first()
     return None
 
+
 def get_all_users(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
     """Retrieves a paginated list of all users."""
-    return db.exec(select(User).offset(skip).limit(limit)).all()
+    return list(db.exec(select(User).offset(skip).limit(limit)).all())
+
 
 def create_user(db: Session, user: UserCreate) -> User:
     """Creates a new user and hashes their password."""
@@ -39,31 +45,35 @@ def create_user(db: Session, user: UserCreate) -> User:
         email=user.email,
         full_name=user.full_name,
         role=user.role,
-        department=user.department
+        department=user.department,
+        clearance_department=user.clearance_department
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
     return db_user
 
-def update_user(db: Session, user: User, updates: UserUpdate) -> User:
+
+def update_user(db: Session, user_id: int, updates: UserUpdate) -> User | None:
     """Updates a user's information."""
-    user = get_user_by_id(db, user_id=user.id)
+    user = get_user_by_id(db, user_id=user_id)
     if not user:
         return None
-    
+
     update_data = updates.model_dump(exclude_unset=True)
-    
+
     if "password" in update_data:
         # Hash the new password if it's being updated
-        update_data["hashed_password"] = hash_password(update_data.pop("password"))
-    
+        update_data["hashed_password"] = hash_password(
+            update_data.pop("password"))
+
     user.sqlmodel_update(update_data)
-    
+
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
+
 
 def delete_user(db: Session, user_id: int) -> User | None:
     """Deletes a user by their ID."""

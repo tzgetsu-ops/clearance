@@ -18,7 +18,7 @@ from src.crud import devices as device_crud
 
 # Maps a device's API key to the admin user ID who activated it.
 # This "activates" a scanner for a specific admin.
-activated_scanners: Dict[str, int] = {} 
+activated_scanners: Dict[str, int] = {}
 
 # Stores the last tag scanned by a device, keyed by the admin ID who was waiting.
 admin_scanned_tags: Dict[int, str] = {}
@@ -28,19 +28,23 @@ admin_scanned_tags: Dict[int, str] = {}
 router = APIRouter(
     prefix="/admin",
     tags=["Administration"],
-    dependencies=[Depends(get_current_active_user(required_roles=[Role.ADMIN, Role.STAFF]))],
+    dependencies=[Depends(get_current_active_user(
+        required_roles=[Role.ADMIN, Role.STAFF]))],
 )
 
 # --- New Secure Scanning Workflow ---
 
+
 class ActivationRequest(SQLModel):
     device_id: int
+
 
 @router.post("/scanners/activate", status_code=status.HTTP_204_NO_CONTENT)
 def activate_admin_scanner(
     activation: ActivationRequest,
     db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user(required_roles=[Role.ADMIN, Role.STAFF]))
+    current_user: User = Depends(get_current_active_user(
+        required_roles=[Role.ADMIN, Role.STAFF]))
 ):
     """
     STEP 1 (Browser): Admin clicks "Scan Card" in the UI.
@@ -48,17 +52,20 @@ def activate_admin_scanner(
     """
     device = device_crud.get_device_by_id(db, device_id=activation.device_id)
     if not device:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Device not found.")
-    
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Device not found.")
+
     # Map the device's API key to the currently logged-in admin's ID.
-    activated_scanners[device.api_key] = current_user.id
+    if current_user.id is not None:
+        activated_scanners[device.api_key] = current_user.id
     return
 
 
 @router.post("/scanners/scan", status_code=status.HTTP_204_NO_CONTENT)
 def receive_scan_from_activated_device(
     scan_data: TagScan,
-    api_key: str = Depends(get_api_key) # Device authenticates with its API Key
+    # Device authenticates with its API Key
+    api_key: str = Depends(get_api_key)
 ):
     """
     STEP 2 (Device): The ESP32 device sends the scanned tag to this endpoint.
@@ -67,23 +74,31 @@ def receive_scan_from_activated_device(
     # Check if this device was activated by an admin.
     admin_id = activated_scanners.pop(api_key, None)
     if admin_id is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This scanner has not been activated for a scan.")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="This scanner has not been activated for a scan.")
 
     # Store the scanned tag against the admin who was waiting for it.
     admin_scanned_tags[admin_id] = scan_data.tag_id
     return
 
+
 @router.get("/scanners/retrieve", response_model=TagScan)
 def retrieve_scanned_tag_for_ui(
-    current_user: User = Depends(get_current_active_user(required_roles=[Role.ADMIN, Role.STAFF]))
+    current_user: User = Depends(get_current_active_user(
+        required_roles=[Role.ADMIN, Role.STAFF]))
 ):
     """
     STEP 3 (Browser): The browser polls this endpoint to get the tag ID
     that the device reported in STEP 2.
     """
+    if current_user.id is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="User ID not available.")
+
     tag_id = admin_scanned_tags.pop(current_user.id, None)
     if not tag_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No tag has been scanned by the activated device yet.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="No tag has been scanned by the activated device yet.")
     return TagScan(tag_id=tag_id)
 
 
@@ -92,36 +107,46 @@ def retrieve_scanned_tag_for_ui(
 @router.post("/students/", response_model=StudentReadWithClearance, status_code=status.HTTP_201_CREATED)
 def create_student(student: StudentCreate, db: Session = Depends(get_session)):
     """(Admin & Staff) Creates a new student and initializes their clearance status."""
-    db_student = student_crud.get_student_by_matric_no(db, matric_no=student.matric_no)
+    db_student = student_crud.get_student_by_matric_no(
+        db, matric_no=student.matric_no)
     if db_student:
-        raise HTTPException(status_code=400, detail="Matriculation number already registered")
+        raise HTTPException(
+            status_code=400, detail="Matriculation number already registered")
     return student_crud.create_student(db=db, student=student)
+
 
 @router.get("/students/", response_model=List[StudentReadWithClearance])
 def read_all_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_session)):
     """(Admin & Staff) Retrieves a list of all student records."""
     return student_crud.get_all_students(db, skip=skip, limit=limit)
 
+
 @router.get("/students/lookup", response_model=StudentReadWithClearance)
 def lookup_student(
-    matric_no: Optional[str] = Query(None, description="Matriculation number of the student."),
-    tag_id: Optional[str] = Query(None, description="RFID tag ID linked to the student."),
+    matric_no: Optional[str] = Query(
+        None, description="Matriculation number of the student."),
+    tag_id: Optional[str] = Query(
+        None, description="RFID tag ID linked to the student."),
     db: Session = Depends(get_session)
 ):
     """(Admin & Staff) Looks up a single student by Matric Number OR Tag ID."""
     if not matric_no and not tag_id:
-        raise HTTPException(status_code=400, detail="A matric_no or tag_id must be provided.")
+        raise HTTPException(
+            status_code=400, detail="A matric_no or tag_id must be provided.")
     if matric_no and tag_id:
-        raise HTTPException(status_code=400, detail="Provide either matric_no or tag_id, not both.")
+        raise HTTPException(
+            status_code=400, detail="Provide either matric_no or tag_id, not both.")
 
     db_student = None
     if matric_no:
-        db_student = student_crud.get_student_by_matric_no(db, matric_no=matric_no)
+        db_student = student_crud.get_student_by_matric_no(
+            db, matric_no=matric_no)
     elif tag_id:
         db_student = student_crud.get_student_by_tag_id(db, tag_id=tag_id)
-    
+
     if not db_student:
-        raise HTTPException(status_code=404, detail="Student not found with the provided identifier.")
+        raise HTTPException(
+            status_code=404, detail="Student not found with the provided identifier.")
     return db_student
 
 
@@ -133,15 +158,18 @@ def read_single_student(student_id: int, db: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Student not found")
     return db_student
 
+
 @router.put("/students/{student_id}", response_model=StudentReadWithClearance)
 def update_student_details(student_id: int, student: StudentUpdate, db: Session = Depends(get_session)):
     """(Admin & Staff) Updates a student's information."""
-    updated_student = student_crud.update_student(db, student_id=student_id, student_update=student)
+    updated_student = student_crud.update_student(
+        db, student_id=student_id, updates=student)
     if not updated_student:
         raise HTTPException(status_code=404, detail="Student not found")
     return updated_student
 
 # --- Tag Management (Admin + Staff) ---
+
 
 @router.post("/tags/link", response_model=RFIDTagRead)
 def link_rfid_tag(link_data: TagLink, db: Session = Depends(get_session)):
@@ -153,6 +181,7 @@ def link_rfid_tag(link_data: TagLink, db: Session = Depends(get_session)):
             detail="Could not link tag. The tag may already be in use, or the user/student already has a tag."
         )
     return new_tag
+
 
 @router.delete("/tags/{tag_id}/unlink", response_model=RFIDTagRead)
 def unlink_rfid_tag(tag_id: str, db: Session = Depends(get_session)):
@@ -176,64 +205,78 @@ def require_super_admin(current_user: User = Depends(get_current_active_user()))
             detail="This action requires Super Admin privileges."
         )
 
+
 @router.post(
     "/users/",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(get_current_active_user(required_roles=[Role.ADMIN]))]
+    dependencies=[
+        Depends(get_current_active_user(required_roles=[Role.ADMIN]))]
 )
 def create_user_as_admin(user: UserCreate, db: Session = Depends(get_session)):
     """(Super Admin Only) Creates a new user (admin or staff)."""
     if user_crud.get_user_by_username(db, username=user.username):
-        raise HTTPException(status_code=400, detail="Username already registered.")
+        raise HTTPException(
+            status_code=400, detail="Username already registered.")
     if user_crud.get_user_by_email(db, email=user.email):
-        raise HTTPException(status_code=400, detail="Email already registered.")
+        raise HTTPException(
+            status_code=400, detail="Email already registered.")
     return user_crud.create_user(db=db, user=user)
+
 
 @router.get("/users/", response_model=List[UserRead], dependencies=[Depends(require_super_admin)])
 def read_all_users(db: Session = Depends(get_session)):
     """(Super Admin Only) Retrieves a list of all users."""
     return user_crud.get_all_users(db)
 
+
 @router.get("/users/lookup", response_model=UserRead, dependencies=[Depends(require_super_admin)])
 def lookup_user(
     username: Optional[str] = Query(None, description="Username of the user."),
-    tag_id: Optional[str] = Query(None, description="RFID tag ID linked to the user."),
+    tag_id: Optional[str] = Query(
+        None, description="RFID tag ID linked to the user."),
     db: Session = Depends(get_session)
 ):
     """(Super Admin Only) Looks up a single user by Username OR Tag ID."""
     if not username and not tag_id:
-        raise HTTPException(status_code=400, detail="A username or tag_id must be provided.")
+        raise HTTPException(
+            status_code=400, detail="A username or tag_id must be provided.")
     if username and tag_id:
-        raise HTTPException(status_code=400, detail="Provide either username or tag_id, not both.")
+        raise HTTPException(
+            status_code=400, detail="Provide either username or tag_id, not both.")
 
     db_user = None
     if username:
         db_user = user_crud.get_user_by_username(db, username=username)
     elif tag_id:
         db_user = user_crud.get_user_by_tag_id(db, tag_id=tag_id)
-    
+
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found with the provided identifier.")
+        raise HTTPException(
+            status_code=404, detail="User not found with the provided identifier.")
     return db_user
+
 
 @router.put("/users/{user_id}", response_model=UserRead, dependencies=[Depends(require_super_admin)])
 def update_user_details(user_id: int, user: UserUpdate, db: Session = Depends(get_session)):
-    """(Super Admin Only) Updates a user's details (e.g., role)."""
-    updated_user = user_crud.update_user(db, user_id=user_id, user_update=user)
+    """(Super Admin Only) Updates a user's details (e.g., role, clearance department assignment)."""
+    updated_user = user_crud.update_user(db, user_id=user_id, updates=user)
     if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")
     return updated_user
+
 
 @router.delete("/users/{user_id}", response_model=UserRead, dependencies=[Depends(require_super_admin)])
 def delete_user_account(user_id: int, db: Session = Depends(get_session), current_user: User = Depends(get_current_active_user())):
     """(Super Admin Only) Deletes a user account."""
     if current_user.id == user_id:
-        raise HTTPException(status_code=400, detail="Cannot delete your own account.")
+        raise HTTPException(
+            status_code=400, detail="Cannot delete your own account.")
     deleted_user = user_crud.delete_user(db, user_id=user_id)
     if not deleted_user:
         raise HTTPException(status_code=404, detail="User not found")
     return deleted_user
+
 
 @router.delete("/students/{student_id}", response_model=StudentRead, dependencies=[Depends(require_super_admin)])
 def delete_student_record(student_id: int, db: Session = Depends(get_session)):
@@ -243,18 +286,23 @@ def delete_student_record(student_id: int, db: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail="Student not found")
     return deleted_student
 
+
 @router.post("/devices/", response_model=DeviceRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_super_admin)])
 def create_device(device: DeviceCreate, db: Session = Depends(get_session)):
     """(Super Admin Only) Registers a new RFID hardware device."""
-    db_device = device_crud.get_device_by_location(db, location=device.location)
+    db_device = device_crud.get_device_by_location(
+        db, location=device.location)
     if db_device:
-        raise HTTPException(status_code=400, detail=f"A device at location '{device.location}' already exists.")
+        raise HTTPException(
+            status_code=400, detail=f"A device at location '{device.location}' already exists.")
     return device_crud.create_device(db=db, device=device)
+
 
 @router.get("/devices/", response_model=List[DeviceRead], dependencies=[Depends(require_super_admin)])
 def read_all_devices(db: Session = Depends(get_session)):
     """(Super Admin Only) Retrieves a list of all registered devices."""
     return device_crud.get_all_devices(db)
+
 
 @router.delete("/devices/{device_id}", response_model=DeviceRead, dependencies=[Depends(require_super_admin)])
 def delete_device_registration(device_id: int, db: Session = Depends(get_session)):
@@ -263,3 +311,68 @@ def delete_device_registration(device_id: int, db: Session = Depends(get_session
     if not deleted_device:
         raise HTTPException(status_code=404, detail="Device not found")
     return deleted_device
+
+
+@router.get("/clearance/overview")
+def get_clearance_overview(
+    db: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user(
+        required_roles=[Role.ADMIN, Role.STAFF]))
+):
+    """Get comprehensive clearance overview for admin dashboard."""
+    all_students = student_crud.get_all_students(db)
+
+    overview = {
+        "total_students": len(all_students),
+        "clearance_summary": {
+            "fully_cleared": 0,
+            "partially_cleared": 0,
+            "pending": 0,
+            "rejected": 0,
+            "not_started": 0
+        },
+        "recent_activity": [],
+        "department_breakdown": {}
+    }
+
+    # Initialize department breakdown
+    from src.models import ClearanceDepartment
+    for dept in ClearanceDepartment:
+        overview["department_breakdown"][dept.value] = {
+            "approved": 0,
+            "pending": 0,
+            "rejected": 0
+        }
+
+    # Calculate statistics
+    for student in all_students:
+        if not student.clearance_statuses:
+            overview["clearance_summary"]["not_started"] += 1
+            continue
+
+        approved_count = sum(
+            1 for status in student.clearance_statuses
+            if status.status.value == "approved"
+        )
+        total_departments = len(student.clearance_statuses)
+        has_rejection = any(status.status.value ==
+                            "rejected" for status in student.clearance_statuses)
+
+        # Update overall statistics
+        if has_rejection:
+            overview["clearance_summary"]["rejected"] += 1
+        elif approved_count == total_departments:
+            overview["clearance_summary"]["fully_cleared"] += 1
+        elif approved_count > 0:
+            overview["clearance_summary"]["partially_cleared"] += 1
+        else:
+            overview["clearance_summary"]["pending"] += 1
+
+        # Update department breakdown
+        for status in student.clearance_statuses:
+            dept_name = status.department.value
+            status_value = status.status.value
+            if dept_name in overview["department_breakdown"]:
+                overview["department_breakdown"][dept_name][status_value] += 1
+
+    return overview
