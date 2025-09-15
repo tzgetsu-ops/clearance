@@ -47,6 +47,56 @@ def migrate_clearance_department_column():
             print(f"Error during clearance_department column migration: {e}")
             session.rollback()
 
+
+def migrate_student_usernames():
+    """
+    Fix student usernames to use matric_no instead of full_name.
+    This is needed because students login with their matric_no as username,
+    and the /students/me/clearance endpoint expects this mapping.
+    """
+    with Session(engine) as session:
+        try:
+            from src.models import User, Student, Role
+            from sqlmodel import select
+
+            # Get all student users
+            student_users = list(session.exec(
+                select(User).where(User.role == Role.STUDENT)).all())
+
+            # Get all students
+            students = list(session.exec(select(Student)).all())
+
+            if not student_users or not students:
+                print("No student users or student records found to migrate.")
+                return
+
+            # Create a mapping of full_name to matric_no
+            name_to_matric = {
+                student.full_name: student.matric_no for student in students}
+
+            fixed_count = 0
+            for user in student_users:
+                # If username is currently a full name (not matric_no), fix it
+                if user.username in name_to_matric:
+                    old_username = user.username
+                    new_username = name_to_matric[user.username]
+
+                    print(
+                        f"Fixing student username: '{old_username}' -> '{new_username}'")
+                    user.username = new_username
+                    session.add(user)
+                    fixed_count += 1
+
+            if fixed_count > 0:
+                session.commit()
+                print(f"Successfully fixed {fixed_count} student usernames.")
+            else:
+                print("No student usernames needed fixing.")
+
+        except Exception as e:
+            print(f"Error during student username migration: {e}")
+            session.rollback()
+
 # --- Database Initialization ---
 
 
@@ -61,6 +111,7 @@ def create_db_and_tables():
 
     # Run any necessary migrations
     migrate_clearance_department_column()
+    migrate_student_usernames()
 
 # --- Database Session Management ---
 

@@ -74,16 +74,16 @@ export default function MyClearancePage() {
   const getOverallStatusMessage = (status: string) => {
     switch (status) {
       case "fully_cleared":
-        return "🎉 Congratulations! You have completed all clearance requirements."
+        return "Congratulations! You have completed all clearance requirements."
       case "partially_cleared":
-        return "📈 You have made progress. Some departments still require clearance."
+        return "You have made progress. Some departments still require clearance."
       case "rejected":
-        return "⚠️ Some departments have rejected your clearance. Please address the issues and reapply."
+        return "Some departments have rejected your clearance. Please address the issues and reapply."
       case "not_started":
-        return "📋 Your clearance process hasn't been initialized yet. Contact administration."
+        return "Your clearance process hasn't been initialized yet. Contact administration."
       case "pending":
       default:
-        return "⏳ Your clearance is being processed. Check back later for updates."
+        return "Your clearance is being processed. Check back later for updates."
     }
   }
 

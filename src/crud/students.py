@@ -63,7 +63,7 @@ def create_student(db: Session, student: StudentCreate) -> Student:
     user_for_student = UserCreate(
         password=student.password,  # The password from the student creation form
         email=student.email,
-        username=student.full_name,
+        username=student.matric_no,
         full_name=student.full_name,
         department=student.department,
         role=Role.STUDENT,
