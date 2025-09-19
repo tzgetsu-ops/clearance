@@ -3,7 +3,7 @@ from sqlmodel import Session, SQLModel
 from typing import List, Optional, Dict
 
 from src.database import get_session
-from src.auth import get_current_active_user, get_api_key
+from src.auth import get_current_active_user, get_api_key, get_current_user_or_device, AuthenticatedEntity
 from src.models import (
     User, UserCreate, UserRead, UserUpdate, Role,
     Student, StudentCreate, StudentReadWithClearance, StudentUpdate, StudentRead,
@@ -28,8 +28,7 @@ admin_scanned_tags: Dict[int, str] = {}
 router = APIRouter(
     prefix="/admin",
     tags=["Administration"],
-    dependencies=[Depends(get_current_active_user(
-        required_roles=[Role.ADMIN, Role.STAFF]))],
+    # Remove default dependency - we'll add it per route as needed
 )
 
 # --- New Secure Scanning Workflow ---
@@ -49,6 +48,7 @@ def activate_admin_scanner(
     """
     STEP 1 (Browser): Admin clicks "Scan Card" in the UI.
     The browser calls this endpoint to 'arm' their designated desk scanner.
+    This route requires JWT authentication (web users only).
     """
     device = device_crud.get_device_by_id(db, device_id=activation.device_id)
     if not device:
@@ -64,12 +64,12 @@ def activate_admin_scanner(
 @router.post("/scanners/scan", status_code=status.HTTP_204_NO_CONTENT)
 def receive_scan_from_activated_device(
     scan_data: TagScan,
-    # Device authenticates with its API Key
+    # Device authenticates with its API Key (API key only)
     api_key: str = Depends(get_api_key)
 ):
     """
     STEP 2 (Device): The ESP32 device sends the scanned tag to this endpoint.
-    This endpoint is protected by the device's API Key.
+    This endpoint requires API key authentication (devices only).
     """
     # Check if this device was activated by an admin.
     admin_id = activated_scanners.pop(api_key, None)
@@ -90,6 +90,7 @@ def retrieve_scanned_tag_for_ui(
     """
     STEP 3 (Browser): The browser polls this endpoint to get the tag ID
     that the device reported in STEP 2.
+    This route requires JWT authentication (web users only).
     """
     if current_user.id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
@@ -105,7 +106,12 @@ def retrieve_scanned_tag_for_ui(
 # --- All other administrative endpoints remain the same ---
 # ... (Student Management, User Management, etc.) ...
 @router.post("/students/", response_model=StudentReadWithClearance, status_code=status.HTTP_201_CREATED)
-def create_student(student: StudentCreate, db: Session = Depends(get_session)):
+def create_student(
+    student: StudentCreate,
+    db: Session = Depends(get_session),
+    auth: AuthenticatedEntity = Depends(
+        get_current_user_or_device(required_roles=[Role.ADMIN, Role.STAFF]))
+):
     """(Admin & Staff) Creates a new student and initializes their clearance status."""
     db_student = student_crud.get_student_by_matric_no(
         db, matric_no=student.matric_no)
@@ -116,7 +122,13 @@ def create_student(student: StudentCreate, db: Session = Depends(get_session)):
 
 
 @router.get("/students/", response_model=List[StudentReadWithClearance])
-def read_all_students(skip: int = 0, limit: int = 100, db: Session = Depends(get_session)):
+def read_all_students(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_session),
+    auth: AuthenticatedEntity = Depends(
+        get_current_user_or_device(required_roles=[Role.ADMIN, Role.STAFF]))
+):
     """(Admin & Staff) Retrieves a list of all student records."""
     return student_crud.get_all_students(db, skip=skip, limit=limit)
 
@@ -127,7 +139,9 @@ def lookup_student(
         None, description="Matriculation number of the student."),
     tag_id: Optional[str] = Query(
         None, description="RFID tag ID linked to the student."),
-    db: Session = Depends(get_session)
+    db: Session = Depends(get_session),
+    auth: AuthenticatedEntity = Depends(
+        get_current_user_or_device(required_roles=[Role.ADMIN, Role.STAFF]))
 ):
     """(Admin & Staff) Looks up a single student by Matric Number OR Tag ID."""
     if not matric_no and not tag_id:
@@ -172,7 +186,12 @@ def update_student_details(student_id: int, student: StudentUpdate, db: Session 
 
 
 @router.post("/tags/link", response_model=RFIDTagRead)
-def link_rfid_tag(link_data: TagLink, db: Session = Depends(get_session)):
+def link_rfid_tag(
+    link_data: TagLink,
+    db: Session = Depends(get_session),
+    auth: AuthenticatedEntity = Depends(
+        get_current_user_or_device(required_roles=[Role.ADMIN, Role.STAFF]))
+):
     """(Admin & Staff) Links an RFID tag to a student or user."""
     new_tag = tag_crud.link_tag(db, link_data)
     if not new_tag:
@@ -184,7 +203,12 @@ def link_rfid_tag(link_data: TagLink, db: Session = Depends(get_session)):
 
 
 @router.delete("/tags/{tag_id}/unlink", response_model=RFIDTagRead)
-def unlink_rfid_tag(tag_id: str, db: Session = Depends(get_session)):
+def unlink_rfid_tag(
+    tag_id: str,
+    db: Session = Depends(get_session),
+    auth: AuthenticatedEntity = Depends(
+        get_current_user_or_device(required_roles=[Role.ADMIN, Role.STAFF]))
+):
     """(Admin & Staff) Unlinks an RFID tag, making it available again."""
     deleted_tag = tag_crud.unlink_tag(db, tag_id)
     if not deleted_tag:
@@ -316,7 +340,7 @@ def delete_device_registration(device_id: int, db: Session = Depends(get_session
 @router.get("/clearance/overview")
 def get_clearance_overview(
     db: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_user(
+    auth: AuthenticatedEntity = Depends(get_current_user_or_device(
         required_roles=[Role.ADMIN, Role.STAFF]))
 ):
     """Get comprehensive clearance overview for admin dashboard."""
