@@ -41,7 +41,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">COLENG</CardTitle>
-          <CardDescription>University Clearance Portal</CardDescription>
+          <CardDescription>FUNAAB Clearance Portal</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

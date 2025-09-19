@@ -7,9 +7,8 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "COLENG - University Clearance Portal",
-  description: "University clearance management system with RFID integration",
-  generator: "v0.app",
+  title: "COLENG - FUNAAB Clearance Portal",
+  description: "Funaab clearance management system with RFID integration",
 }
 
 export default function RootLayout({

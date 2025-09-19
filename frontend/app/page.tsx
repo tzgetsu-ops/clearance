@@ -15,7 +15,7 @@ export default function HomePage() {
           <div className="flex items-center space-x-2">
             <GraduationCap className="h-8 w-8 text-primary" />
             <div>
-              <h1 className="text-xl font-bold">COLENG</h1>
+              <h1 className="text-xl font-bold">FUNAAB</h1>
               <p className="text-xs text-muted-foreground">Clearance Portal</p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t bg-muted/50 mt-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 College of Engineering. All rights reserved.</p>
+          <p>&copy; 2025 College of Engineering. All rights reserved.</p>
         </div>
       </footer>
     </div>
